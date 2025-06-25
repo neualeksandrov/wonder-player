@@ -111,8 +111,7 @@ class PlayerInterface:
     def set_current_track(self, track):
         """Обновление текущего трека"""
         if track:
-            filename = os.path.basename(track)
-            self.current_track = f"Воспроизведение ({self.current_index+1}/{self.playlist_length}): {filename}"
+            self.current_track = f"Воспроизведение ({self.current_index+1}/{self.playlist_length}): {track}"
         else:
             self.current_track = "Трек неизвестен"
     
@@ -210,7 +209,6 @@ def play_music(playlist):
             # Обновляем информацию о треке в интерфейсе
             player_interface.update_track_info(current_index, len(playlist))
             player_interface.set_current_track(track)
-            player_interface.print_help()
             return True
         except pygame.error as e:
             print(f"Ошибка при чтении файла {track}: {str(e)}")
