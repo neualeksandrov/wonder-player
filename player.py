@@ -9,7 +9,7 @@ import tty
 import fcntl
 
 # Версия плеера
-VERSION = "1.0"
+VERSION = "1.1"
 PLAYLIST_FILE = "saved_playlist.txt"
 
 def find_audio_files(folder):
@@ -84,10 +84,7 @@ class PlayerInterface:
         self.commands = {
             'pause_toggle': "пауза/продолжение",
             'next_track': "следующий трек",
-            'prev_track': "предыдущий трек",
-            'shuffle': "перемешать плейлист",
             'quit': "выход",
-            'help': "справка",
             'delete': "удалить текущий трек"
         }
         self.last_remap_time = time.time()
@@ -154,14 +151,8 @@ class PlayerInterface:
             return 'pause_toggle'
         elif key == self.bindings['next_track']:
             return 'next_track'
-        elif key == self.bindings['prev_track']:
-            return 'prev_track'
-        elif key == self.bindings['shuffle']:
-            return 'shuffle'
         elif key == self.bindings['quit']:
             return 'quit'
-        elif key == self.bindings['help']:
-            return 'help'
         elif key == self.bindings['delete']:
             return 'delete'
         return None
@@ -294,24 +285,10 @@ def play_music(playlist, shuffle=False):
                         if play_track(current_index + 1):
                             paused = False
                     
-                    elif command == 'prev_track':
-                        if current_index > 0 and play_track(current_index - 1):
-                            paused = False
-                    
-                    elif command == 'shuffle':
-                        random.shuffle(playlist)
-                        current_index = 0
-                        if play_track(current_index):
-                            paused = False
-                            print("🔀 Плейлист перемешан!")
-                    
                     elif command == 'quit':
                         pygame.mixer.music.stop()
                         print("\nВыход из программы")
                         break
-                    
-                    elif command == 'help':
-                        player_interface.print_help()
                     
                     elif command == 'delete':
                         # Активируем режим удаления
@@ -322,6 +299,7 @@ def play_music(playlist, shuffle=False):
             
             # Проверка необходимости переназначения клавиш
             if player_interface.should_remap():
+                random.shuffle(playlist)
                 player_interface.remap_keys()
             
             # Проверка завершения трека
@@ -345,17 +323,16 @@ def play_music(playlist, shuffle=False):
 
 def main():
     parser = argparse.ArgumentParser(
-        description=f'Аудиоплеер со случайным переназначением клавиш (версия {VERSION})',
-        epilog='Пример: python audio_player.py /путь/к/музыкальной/папке --shuffle'
+        description=f'Аудиоплеер с перемешиванием и случайным переназначением клавиш (версия {VERSION})',
+        epilog='Пример: python player.py /путь/к/музыкальной/папке --shuffle'
     )
     parser.add_argument('folder', type=str, help='Папка с аудиофайлами')
-    parser.add_argument('--shuffle', action='store_true', help='Перемешать плейлист перед воспроизведением')
     parser.add_argument('--version', action='version', version=f'%(prog)s {VERSION}')
     
     args = parser.parse_args()
 
     # Вывод информации о версии
-    print(f"\n=== Аудиоплеер (версия {VERSION}) ===")
+    print(f"\n===  Wonder player (версия {VERSION}) ===")
     
     # Сначала пытаемся загрузить сохраненный плейлист
     playlist = load_playlist()
