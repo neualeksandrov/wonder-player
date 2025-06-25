@@ -8,6 +8,8 @@ import termios
 import tty
 import fcntl
 
+# Версия плеера
+VERSION = "1.0"
 PLAYLIST_FILE = "saved_playlist.txt"
 
 def find_audio_files(folder):
@@ -70,9 +72,9 @@ def restore_input_settings(fd, old_settings):
     """Восстановление настроек терминала"""
     termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
 
-class KeyBindings:
-    """Класс для управления назначениями клавиш"""
-    def __init__(self):
+class PlayerInterface:
+    """Класс для управления интерфейсом плеера"""
+    def __init__(self, initial_track="", index=0, playlist_length=0):
         self.bindings = {}
         self.available_keys = [
             'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
@@ -86,11 +88,14 @@ class KeyBindings:
             'shuffle': "перемешать плейлист",
             'quit': "выход",
             'help': "справка",
-            'delete': "удалить текущий трек"  # Новая команда
+            'delete': "удалить текущий трек"
         }
         self.last_remap_time = time.time()
         self.next_remap_interval = random.uniform(5, 10)
-        self.delete_mode = False  # Режим удаления
+        self.delete_mode = False
+        self.current_index = index
+        self.playlist_length = playlist_length
+        self.set_current_track(initial_track)
         self.remap_keys()
     
     def remap_keys(self):
@@ -106,12 +111,28 @@ class KeyBindings:
         # Выводим новую справку
         self.print_help()
     
+    def set_current_track(self, track):
+        """Обновление текущего трека"""
+        if track:
+            filename = os.path.basename(track)
+            self.current_track = f"Воспроизведение ({self.current_index+1}/{self.playlist_length}): {filename}"
+        else:
+            self.current_track = "Трек неизвестен"
+    
+    def update_track_info(self, index, playlist_length):
+        """Обновление информации о позиции трека и длине плейлиста"""
+        self.current_index = index
+        self.playlist_length = playlist_length
+    
     def print_help(self):
         """Вывод справки по текущим назначениям клавиш"""
         if self.delete_mode:
-            print("\nРЕЖИМ УДАЛЕНИЯ: Все кнопки удаляют текущий трек!")
+            print(f"\n=== РЕЖИМ УДАЛЕНИЯ ===")
+            print(f"{self.current_track}")
+            print("ЛЮБАЯ КНОПКА УДАЛИТ ТЕКУЩИЙ ТРЕК!")
         else:
-            print("\nНазначения клавиш:")
+            print(f"\n{self.current_track}")
+            print("Назначения клавиш:")
             for command, key in self.bindings.items():
                 print(f"  {key.upper()} - {self.commands[command]}")
             print(f"Следующее переназначение через: {self.next_remap_interval:.1f} сек")
@@ -148,7 +169,8 @@ class KeyBindings:
     def enter_delete_mode(self):
         """Активация режима удаления"""
         self.delete_mode = True
-        print("\n=== РЕЖИМ УДАЛЕНИЯ АКТИВИРОВАН ===")
+        print(f"\n{self.current_track}")
+        print("=== РЕЖИМ УДАЛЕНИЯ АКТИВИРОВАН ===")
         print("ЛЮБАЯ КНОПКА УДАЛИТ ТЕКУЩИЙ ТРЕК!")
     
     def exit_delete_mode(self):
@@ -172,8 +194,12 @@ def play_music(playlist, shuffle=False):
     # Настройка неблокирующего ввода
     fd, old_settings = setup_non_blocking_input()
     
-    # Инициализация назначений клавиш
-    key_bindings = KeyBindings()
+    # Инициализация интерфейса плеера с первым треком
+    player_interface = PlayerInterface(
+        initial_track=playlist[current_index] if playlist else "",
+        index=current_index,
+        playlist_length=len(playlist)
+    )
     
     # Функция для воспроизведения трека
     def play_track(index):
@@ -189,9 +215,12 @@ def play_music(playlist, shuffle=False):
                 
             pygame.mixer.music.load(track)
             pygame.mixer.music.play()
-            filename = os.path.basename(track)
-            print(f"\nВоспроизведение ({index+1}/{len(playlist)}): {filename}")
             current_index = index
+            
+            # Обновляем информацию о треке в интерфейсе
+            player_interface.update_track_info(current_index, len(playlist))
+            player_interface.set_current_track(track)
+            player_interface.print_help()
             return True
         except pygame.error as e:
             print(f"Ошибка при чтении файла {track}: {str(e)}")
@@ -209,10 +238,10 @@ def play_music(playlist, shuffle=False):
             try:
                 key = sys.stdin.read(1).lower()
                 if key:
-                    command = key_bindings.handle_key(key)
+                    command = player_interface.handle_key(key)
                     
                     # Режим удаления
-                    if command == 'delete' and key_bindings.delete_mode:
+                    if command == 'delete' and player_interface.delete_mode:
                         # Удаление текущего файла
                         current_track = playlist[current_index]
                         try:
@@ -221,10 +250,14 @@ def play_music(playlist, shuffle=False):
                             
                             # Удаляем файл
                             os.remove(current_track)
-                            print(f"\n>>> ФАЙЛ УДАЛЕН: {current_track}")
+                            print(f"\n>>> ФАЙЛ УДАЛЕН: {os.path.basename(current_track)}")
                             
                             # Удаляем трек из плейлиста
                             playlist.pop(current_index)
+                            
+                            # Сохраняем обновленный плейлист
+                            save_playlist(playlist)
+                            print("Плейлист сохранен!")
                             
                             # Если плейлист пуст, выходим
                             if not playlist:
@@ -236,7 +269,7 @@ def play_music(playlist, shuffle=False):
                                 current_index = len(playlist) - 1
                             
                             # Выходим из режима удаления
-                            key_bindings.exit_delete_mode()
+                            player_interface.exit_delete_mode()
                             
                             # Воспроизводим следующий трек
                             if not play_track(current_index):
@@ -244,7 +277,7 @@ def play_music(playlist, shuffle=False):
                             
                         except Exception as e:
                             print(f"Ошибка при удалении файла: {str(e)}")
-                            key_bindings.exit_delete_mode()
+                            player_interface.exit_delete_mode()
                     
                     # Обычные команды
                     elif command == 'pause_toggle':
@@ -278,18 +311,18 @@ def play_music(playlist, shuffle=False):
                         break
                     
                     elif command == 'help':
-                        key_bindings.print_help()
+                        player_interface.print_help()
                     
                     elif command == 'delete':
                         # Активируем режим удаления
-                        key_bindings.enter_delete_mode()
+                        player_interface.enter_delete_mode()
             
             except IOError:
                 pass  # Нет ввода
             
             # Проверка необходимости переназначения клавиш
-            if key_bindings.should_remap():
-                key_bindings.remap_keys()
+            if player_interface.should_remap():
+                player_interface.remap_keys()
             
             # Проверка завершения трека
             if not paused and not pygame.mixer.music.get_busy():
@@ -312,14 +345,18 @@ def play_music(playlist, shuffle=False):
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Аудиоплеер со случайным переназначением клавиш и функцией удаления',
+        description=f'Аудиоплеер со случайным переназначением клавиш (версия {VERSION})',
         epilog='Пример: python audio_player.py /путь/к/музыкальной/папке --shuffle'
     )
     parser.add_argument('folder', type=str, help='Папка с аудиофайлами')
     parser.add_argument('--shuffle', action='store_true', help='Перемешать плейлист перед воспроизведением')
+    parser.add_argument('--version', action='version', version=f'%(prog)s {VERSION}')
     
     args = parser.parse_args()
 
+    # Вывод информации о версии
+    print(f"\n=== Аудиоплеер (версия {VERSION}) ===")
+    
     # Сначала пытаемся загрузить сохраненный плейлист
     playlist = load_playlist()
     
