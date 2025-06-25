@@ -9,7 +9,7 @@ import tty
 import fcntl
 
 # Версия плеера
-VERSION = "1.1"
+VERSION = "1.2"
 PLAYLIST_FILE = "saved_playlist.txt"
 
 def find_audio_files(folder):
@@ -84,6 +84,7 @@ class PlayerInterface:
         self.commands = {
             'pause_toggle': "пауза/продолжение",
             'next_track': "следующий трек",
+            'prev_track': "предыдущий трек",
             'quit': "выход",
             'delete': "удалить текущий трек"
         }
@@ -150,6 +151,8 @@ class PlayerInterface:
             return 'pause_toggle'
         elif key == self.bindings['next_track']:
             return 'next_track'
+        elif key == self.bindings['prev_track']:
+            return 'prev_track'
         elif key == self.bindings['quit']:
             return 'quit'
         elif key == self.bindings['delete']:
@@ -209,6 +212,7 @@ def play_music(playlist):
             # Обновляем информацию о треке в интерфейсе
             player_interface.update_track_info(current_index, len(playlist))
             player_interface.set_current_track(track)
+            # player_interface.print_help()
             return True
         except pygame.error as e:
             print(f"Ошибка при чтении файла {track}: {str(e)}")
@@ -281,6 +285,10 @@ def play_music(playlist):
                     elif command == 'next_track':
                         if play_track(current_index + 1):
                             paused = False
+
+                    elif command == 'prev_track':
+                        if current_index > 0 and play_track(current_index - 1):
+                            paused = False
                     
                     elif command == 'quit':
                         pygame.mixer.music.stop()
@@ -296,7 +304,6 @@ def play_music(playlist):
             
             # Проверка необходимости переназначения клавиш
             if player_interface.should_remap():
-                random.shuffle(playlist)
                 player_interface.remap_keys()
             
             # Проверка завершения трека
