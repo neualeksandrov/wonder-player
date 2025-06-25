@@ -169,14 +169,13 @@ class PlayerInterface:
         self.delete_mode = False
         print("\n=== РЕЖИМ УДАЛЕНИЯ ДЕАКТИВИРОВАН ===")
 
-def play_music(playlist, shuffle=False):
+def play_music(playlist):
     """Воспроизведение плейлиста с возможностью управления"""
     if not playlist:
         print("Ошибка: Плейлист пуст!")
         return
         
-    if shuffle:
-        random.shuffle(playlist)
+    random.shuffle(playlist)
     
     pygame.mixer.init()
     current_index = 0
@@ -324,7 +323,7 @@ def play_music(playlist, shuffle=False):
 def main():
     parser = argparse.ArgumentParser(
         description=f'Аудиоплеер с перемешиванием и случайным переназначением клавиш (версия {VERSION})',
-        epilog='Пример: python player.py /путь/к/музыкальной/папке --shuffle'
+        epilog='Пример: python player.py /путь/к/музыкальной/папке'
     )
     parser.add_argument('folder', type=str, help='Папка с аудиофайлами')
     parser.add_argument('--version', action='version', version=f'%(prog)s {VERSION}')
@@ -358,7 +357,7 @@ def main():
     
     # Воспроизведение плейлиста
     print("Треков в плейлисте:", len(playlist))
-    play_music(playlist, shuffle=args.shuffle)
+    play_music(playlist)
 
 if __name__ == "__main__":
     main()
