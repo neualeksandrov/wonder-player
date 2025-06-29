@@ -9,7 +9,7 @@ import tty
 import fcntl
 
 # Версия плеера
-VERSION = "1.3"
+VERSION = "1.4"
 PLAYLIST_FILE = "saved_playlist.txt"
 
 def find_audio_files(folder):
@@ -183,6 +183,7 @@ def play_music(playlist):
     
     pygame.mixer.init()
     current_index = 0
+    backward = 0
     paused = False
     
     # Настройка неблокирующего ввода
@@ -200,18 +201,23 @@ def play_music(playlist):
     # Функция для воспроизведения трека
     def play_track(index):
         nonlocal current_index
+        nonlocal backward
+        
         if index < 0 or index >= len(playlist):
             return False
 
-        #if player_interface.should_remap():
-        #    player_interface.remap_keys()
+        if (index < current_index):
+            backward += 1
+            track = list(history.keys()).pop(-1 - backward)
+            history[track] = False
+        else:
+            backward = 0
+            track = playlist[index]
 
-        track = playlist[index]
-        #if history.get(track, False):
-        #    return play_track(index)
-
-        #history[track] = True
-
+        if history.get(track, False):
+            random.shuffle(playlist)
+            return play_track(index)
+                
         try:
             if not os.path.exists(track):
                 print(f"Файл не найден: {track}")
@@ -224,11 +230,6 @@ def play_music(playlist):
             # Обновляем информацию о треке в интерфейсе
             player_interface.update_track_info(current_index, len(playlist))
             player_interface.set_current_track(track)
-            # player_interface.print_help()
-
-            if history.get(track, False):
-                random.shuffle(playlist)
-                return play_track(index)
 
             history[track] = True
             return True
