@@ -9,7 +9,7 @@ import tty
 import fcntl
 
 # Версия плеера
-VERSION = "1.2"
+VERSION = "1.3"
 PLAYLIST_FILE = "saved_playlist.txt"
 
 def find_audio_files(folder):
@@ -112,8 +112,10 @@ class PlayerInterface:
     def set_current_track(self, track):
         """Обновление текущего трека"""
         if track:
+            self.current_track_filename = track
             self.current_track = f"Воспроизведение ({self.current_index+1}/{self.playlist_length}): {track}"
         else:
+            self.current_track_filename = track
             self.current_track = "Трек неизвестен"
     
     def update_track_info(self, index, playlist_length):
@@ -252,17 +254,18 @@ def play_music(playlist):
                     # Режим удаления
                     if command == 'delete' and player_interface.delete_mode:
                         # Удаление текущего файла
-                        current_track = playlist[current_index]
+                        #current_track = playlist[current_index]
+                        current_track = player_interface.current_track_filename
                         try:
                             # Останавливаем воспроизведение
                             pygame.mixer.music.stop()
                             
                             # Удаляем файл
                             os.remove(current_track)
-                            print(f"\n>>> ФАЙЛ УДАЛЕН: {os.path.basename(current_track)}")
+                            print(f"\n>>> ФАЙЛ УДАЛЕН: {current_track}")
                             
                             # Удаляем трек из плейлиста
-                            playlist.pop(current_index)
+                            playlist.pop(playlist.index(current_track))
                             
                             # Сохраняем обновленный плейлист
                             save_playlist(playlist)
