@@ -132,7 +132,7 @@ class PlayerInterface:
             print("Назначения клавиш:")
             for command, key in self.bindings.items():
                 print(f"  {key.upper()} - {self.commands[command]}")
-            print(f"Следующее переназначение через: {self.next_remap_interval:.1f} сек")
+            # print(f"Следующее переназначение через: {self.next_remap_interval:.1f} сек")
     
     def should_remap(self):
         """Проверка, нужно ли выполнять переназначение"""
@@ -185,7 +185,9 @@ def play_music(playlist):
     
     # Настройка неблокирующего ввода
     fd, old_settings = setup_non_blocking_input()
-    
+
+    history = {}
+
     # Инициализация интерфейса плеера с первым треком
     player_interface = PlayerInterface(
         initial_track=playlist[current_index] if playlist else "",
@@ -198,8 +200,16 @@ def play_music(playlist):
         nonlocal current_index
         if index < 0 or index >= len(playlist):
             return False
-            
+
+        #if player_interface.should_remap():
+        #    player_interface.remap_keys()
+
         track = playlist[index]
+        #if history.get(track, False):
+        #    return play_track(index)
+
+        #history[track] = True
+
         try:
             if not os.path.exists(track):
                 print(f"Файл не найден: {track}")
@@ -213,7 +223,14 @@ def play_music(playlist):
             player_interface.update_track_info(current_index, len(playlist))
             player_interface.set_current_track(track)
             # player_interface.print_help()
+
+            if history.get(track, False):
+                random.shuffle(playlist)
+                return play_track(index)
+
+            history[track] = True
             return True
+
         except pygame.error as e:
             print(f"Ошибка при чтении файла {track}: {str(e)}")
             return False
@@ -304,6 +321,7 @@ def play_music(playlist):
             
             # Проверка необходимости переназначения клавиш
             if player_interface.should_remap():
+                random.shuffle(playlist)
                 player_interface.remap_keys()
             
             # Проверка завершения трека
