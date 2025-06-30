@@ -91,6 +91,7 @@ class PlayerInterface:
         self.last_remap_time = time.time()
         self.next_remap_interval = random.uniform(5, 10)
         self.delete_mode = False
+        self.paused = False
         self.current_index = index
         self.playlist_length = playlist_length
         self.set_current_track(initial_track)
@@ -108,7 +109,11 @@ class PlayerInterface:
         
         # Выводим новую справку
         self.print_help()
-    
+
+    def set_paused(self, paused):
+        self.paused = paused
+        self.print_help()
+
     def set_current_track(self, track):
         """Обновление текущего трека"""
         if track:
@@ -136,6 +141,8 @@ class PlayerInterface:
             for command, key in self.bindings.items():
                 print(f"  {key.upper()} - {self.commands[command]}")
             # print(f"Следующее переназначение через: {self.next_remap_interval:.1f} сек")
+        if self.paused:
+            print("⏸ Пауза")
     
     def should_remap(self):
         """Проверка, нужно ли выполнять переназначение"""
@@ -298,19 +305,22 @@ def play_music(playlist):
                         if paused:
                             pygame.mixer.music.unpause()
                             paused = False
-                            print("▶ Продолжение воспроизведения")
+                            player_interface.set_paused(paused) 
+                            #print("▶ Продолжение воспроизведения")
                         else:
                             pygame.mixer.music.pause()
                             paused = True
-                            print("⏸ Пауза")
+                            player_interface.set_paused(paused)
                     
                     elif command == 'next_track':
                         if play_track(current_index + 1):
                             paused = False
+                            player_interface.set_paused(paused)
 
                     elif command == 'prev_track':
                         if current_index > 0 and play_track(current_index - 1):
                             paused = False
+                            player_interface.set_paused(paused)
                     
                     elif command == 'quit':
                         pygame.mixer.music.stop()
@@ -323,24 +333,25 @@ def play_music(playlist):
             
             except IOError:
                 pass  # Нет ввода
-            
-            # Проверка необходимости переназначения клавиш
-            if player_interface.should_remap():
-                random.shuffle(playlist)
-                player_interface.remap_keys()
-            
+
             # Проверка завершения трека
             if not paused and not pygame.mixer.music.get_busy():
                 next_index = current_index + 1
                 if next_index < len(playlist):
                     if play_track(next_index):
                         paused = False
+                        player_interface.set_paused(paused)
                 else:
                     print("\nКонец плейлиста!")
                     break
-            
+
+            # Проверка необходимости переназначения клавиш
+            if player_interface.should_remap():
+                random.shuffle(playlist)
+                player_interface.remap_keys()
+
             time.sleep(0.1)
-            
+
     except KeyboardInterrupt:
         pygame.mixer.music.stop()
         print("\nВоспроизведение прервано")
