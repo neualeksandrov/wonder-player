@@ -125,6 +125,7 @@ class PlayerInterface:
     
     def print_help(self):
         """Вывод справки по текущим назначениям клавиш"""
+        os.system('cls' if os.name == 'nt' else 'clear')
         if self.delete_mode:
             print(f"\n=== РЕЖИМ УДАЛЕНИЯ ===")
             print(f"{self.current_track}")
