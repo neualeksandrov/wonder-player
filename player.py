@@ -142,7 +142,7 @@ class PlayerInterface:
                 print(f"  {key.upper()} - {self.commands[command]}")
             # print(f"Следующее переназначение через: {self.next_remap_interval:.1f} сек")
         if self.paused:
-            print("⏸ Пауза")
+            print("⏸  Пауза")
     
     def should_remap(self):
         """Проверка, нужно ли выполнять переназначение"""
