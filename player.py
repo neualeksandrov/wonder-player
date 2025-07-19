@@ -9,7 +9,7 @@ import tty
 import fcntl
 
 # Версия плеера
-VERSION = "1.4"
+VERSION = "1.5"
 PLAYLIST_FILE = "saved_playlist.txt"
 
 def find_audio_files(folder):
@@ -186,8 +186,6 @@ def play_music(playlist):
     if not playlist:
         print("Ошибка: Плейлист пуст!")
         return
-        
-    random.shuffle(playlist)
     
     pygame.mixer.init()
     current_index = 0
@@ -205,7 +203,13 @@ def play_music(playlist):
         index=current_index,
         playlist_length=len(playlist)
     )
-    
+
+    while not player_interface.should_remap():
+        time.sleep(0.1)
+
+    random.shuffle(playlist)
+    player_interface.remap_keys()
+
     # Функция для воспроизведения трека
     def play_track(index):
         nonlocal current_index
